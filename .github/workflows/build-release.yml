@@ -98,7 +98,6 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew tap microsoft/homebrew-msget
           brew install --cask powershell
 
       - name: Install PowerShell on Linux
