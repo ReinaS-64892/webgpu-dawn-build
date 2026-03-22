@@ -97,8 +97,33 @@ jobs:
       - name: Install PowerShell on macOS
         if: runner.os == 'macOS'
         run: |
-          brew update
-          brew install --cask powershell
+          arch=$(uname -m)
+          case "$arch" in
+            arm64)
+              package_arch="arm64"
+              ;;
+            x86_64)
+              package_arch="x64"
+              ;;
+            *)
+              echo "Unsupported macOS architecture: $arch"
+              exit 1
+              ;;
+          esac
+
+          release_info=$(curl -fsSL "https://api.github.com/repos/PowerShell/PowerShell/releases/latest")
+          version=$(echo "$release_info" | jq -r '.tag_name | ltrimstr("v")')
+          package_name="powershell-${version}-osx-${package_arch}.pkg"
+          download_url=$(echo "$release_info" | jq -r --arg package_name "$package_name" '.assets[] | select(.name == $package_name) | .browser_download_url')
+
+          if [ -z "$download_url" ] || [ "$download_url" = "null" ]; then
+            echo "Could not find PowerShell package $package_name in the latest release"
+            exit 1
+          fi
+
+          curl -fsSL "$download_url" -o "$package_name"
+          sudo installer -allowUntrusted -pkg "$package_name" -target /
+          pwsh --version
 
       - name: Install PowerShell on Linux
         if: runner.os == 'Linux'
